@@ -1,68 +1,112 @@
 # Assessment / Quiz
 
 ## Overview
-- **Lesson:** [title / module.lesson]
+- **Lesson:** Frameworks, Dependency Management, and Application Layering
 - **Format:** 10 questions (mix MCQ / True–False / Short Answer)
 - **Time:** ~10–15 minutes
 - **Scoring:** 1 point each (unless stated)
 
 ## Questions
 
-### Q1 (MCQ)
-[Question?]  
-A. [ ]  
-B. [ ]  
-C. [ ]  
-D. [ ]  
-**Answer:** [A/B/C/D] — [1-line reason]
+### Q1 (True/False)
 
-### Q2 (MCQ)
-[Question?]  
-A. [ ]  
-B. [ ]  
-C. [ ]  
-D. [ ]  
-**Answer:** [A/B/C/D] — [1-line reason]
+Q1: Frameworks control the flow of the application (Inversion of Control), while libraries provide specific functionalities that developers use as needed?
 
-### Q3 (True/False)
-[Statement]  
-**Answer:** [True/False] — [1-line reason]
+A - True
 
-### Q4 (True/False)
-[Statement]  
-**Answer:** [True/False] — [1-line reason]
+B - False
 
-### Q5 (Short Answer)
-[Prompt]  
-**Expected:** [1–2 key points]
+---
 
-### Q6 (Short Answer)
-[Prompt]  
-**Expected:** [1–2 key points]
+Q2: What does IoC stand for in Spring Boot?
 
-### Q7 (MCQ)
-[Question?]  
-A. [ ]  
-B. [ ]  
-C. [ ]  
-D. [ ]  
-**Answer:** [A/B/C/D] — [1-line reason]
+A - Integration of Components
 
-### Q8 (MCQ)
-[Question?]  
-A. [ ]  
-B. [ ]  
-C. [ ]  
-D. [ ]  
-**Answer:** [A/B/C/D] — [1-line reason]
+B - Inversion of Control
 
-### Q9 (True/False)
-[Statement]  
-**Answer:** [True/False] — [1-line reason]
+C - Implementation of Classes
 
-### Q10 (Short Answer)
-[Prompt]  
-**Expected:** [1–2 key points]
+D - Instance of Controller
+
+---
+
+Q3: Dependency Injection is a way to achieve Inversion of Control?
+
+A - True
+
+B - False
+
+---
+
+Q4: Which type of dependency injection is the recommended/preferred method?
+
+A - Field injection
+
+B - Setter injection
+
+C - Constructor injection
+
+D - Method injection
+
+---
+
+Q5: What annotation is used to mark a class as a service layer component in Spring Boot?
+
+A - @Component
+
+B - @Service
+
+C - @Controller
+
+D - @Repository
+
+---
+
+Q6: The @Repository annotation is used for classes that handle CRUD operations on the data store?
+
+A - True
+
+B - False
+
+---
+
+Q7: Which layer should contain the business logic in a layered architecture?
+
+A - Controller
+
+B - Service
+
+C - Repository
+
+D - Model
+
+---
+
+Q8: What annotation is used when you have multiple implementations of an interface and need to specify which one to inject?
+
+A - @Primary
+
+B - @Qualifier
+
+C - @Select
+
+D - @Choose
+
+---
+
+Q9: By default, Spring beans have a singleton scope, meaning only one instance is created?
+
+A - True
+
+B - False
+
+---
+
+Q10: The @Bean annotation is used inside a @Configuration class to manually configure and register beans?
+
+A - True
+
+B - False
 
 ## Notes
 - Keep each question atomic and aligned to the lesson objectives.
