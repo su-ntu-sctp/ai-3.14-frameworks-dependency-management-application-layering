@@ -1,15 +1,17 @@
+# Lesson: Frameworks, Dependency Management, and Application Layering
 
-# Lesson: Frameworks, Dependency Management, and Application Layering  
+## Lesson Overview
+This lesson introduces the key concepts behind Spring Boot's architecture — Inversion of Control, Dependency Injection, and the Service–Repository design pattern. Students learn how Spring manages object creation through beans, apply different injection types, and refactor a simple CRM into a layered, maintainable structure using interfaces and bean configuration.
 
-## Lesson Overview  
-This lesson introduces the key concepts behind Spring Boot’s architecture — Inversion of Control, Dependency Injection, and the Service–Repository design pattern. Students learn how Spring manages object creation through beans, apply different injection types, and refactor a simple CRM into a layered, maintainable structure using interfaces and bean configuration.
+## Lesson Objectives
+By the end of this lesson, students will be able to:
 
-## Lesson Objectives  
-- Differentiate frameworks and libraries, and explain how Inversion of Control affects application flow in Spring Boot.  
-- Declare and manage beans using `@Component` and `@Bean`, and inject dependencies via constructor, setter, and field injection.  
-- Refactor a controller-heavy application into layered Controller, Service, and Repository components.  
-- Implement interface-based design and manage multiple service implementations with `@Primary` and `@Qualifier`.  
-- Describe how bean scopes influence object lifecycle and application performance.
+1. **Differentiate** frameworks and libraries and explain how Inversion of Control affects application flow
+2. **Declare** and manage beans using `@Component` and `@Bean`, and apply constructor, setter, and field injection
+3. **Refactor** a controller-heavy application into layered Controller, Service, and Repository components
+4. **Implement** interface-based design and resolve multiple implementations using `@Primary` and `@Qualifier`
+
+---
 
 ## Part 1: Frameworks and Libraries
 
@@ -34,7 +36,7 @@ The concept of **Inversion of Control** means that the flow of the application i
 
 In a typical Java application, the flow of the application is controlled by the developer. The developer decides when to create instances of classes, when to call methods, etc.
 
-In IoC, the control of creating and managing objects is inverted and given to the framework. Instead of creating instances of classes, the developer will declare the dependencies of the class and let the framework create the instances of the classes and inject them into the class. This is known as **Dependency Injection**. In this way, the components of your application are loosely coupled, which promotes modularity, resuability and testability.
+In IoC, the control of creating and managing objects is inverted and given to the framework. Instead of creating instances of classes, the developer will declare the dependencies of the class and let the framework create the instances of the classes and inject them into the class. This is known as **Dependency Injection**. In this way, the components of your application are loosely coupled, which promotes modularity, reusability and testability.
 
 <img src="https://devopedia.org/images/article/30/4020.1536743448.gif">
 
@@ -47,10 +49,10 @@ In IoC, the control of creating and managing objects is inverted and given to th
 In the entry point of every Spring Boot application i.e. our `main` method, you will see the `@SpringBootApplication` annotation. This annotation is a combination of 3 annotations:
 
 1. `@Configuration` - Indicates that the class contains `@Bean` annotations, pick them up and add them into the spring container.
-1. `@ComponentScan` - To scan for all `@Component` annotations classes located in the same package (or explicitly specified) and add them to the spring container.
-1. `@EnableAutoConfiguration` - Looks for auto-configuration bean (java class) and add them into the spring container.
+2. `@ComponentScan` - To scan for all `@Component` annotated classes located in the same package (or explicitly specified) and add them to the spring container.
+3. `@EnableAutoConfiguration` - Looks for auto-configuration beans (java classes) and adds them into the spring container.
 
-Therefore, `@SpringBootApplication` annotation is a Spring Boot feature to quickly boostrap the default/commonly used annotations into one.
+Therefore, `@SpringBootApplication` annotation is a Spring Boot feature to quickly bootstrap the default/commonly used annotations into one.
 
 Classes that are annotated with `@Component` are known as **Spring Beans**. Spring Beans are managed by the Spring IoC container, also known as the Spring Context or Application Context. The Spring IoC container is responsible for instantiating, configuring, and assembling the Spring Beans.
 
@@ -60,13 +62,13 @@ Classes that are annotated with `@Component` are known as **Spring Beans**. Spri
 
 `@Autowired` is used to inject the dependencies into the class. There are multiple ways to inject dependencies into a class.
 
-| Type        | Description                                                 | Remarks                                              |
-| ----------- | ----------------------------------------------------------- | ---------------------------------------------------- |
-| Constructor | Dependencies are injected through the constructor.          | Preferred method of dependency injection.            |
-| Setter      | Dependencies are injected through setter methods.           | Useful when you want to change the dependency later. |
-| Field       | Dependencies are injected directly into the class property. | Not recommended.                                     |
+| Type | Description | Remarks |
+|---|---|---|
+| Constructor | Dependencies are injected through the constructor | Preferred method of dependency injection |
+| Setter | Dependencies are injected through setter methods | Useful when you want to change the dependency later |
+| Field | Dependencies are injected directly into the class property | Not recommended |
 
-Let's create a simple Spring Boot application `di-demo` to see how all these works. Add the Spring Web and Spring Boot devtools dependencies in `pom.xml`:
+Let's create a simple Spring Boot application `di-demo` to see how all these work. Add the Spring Web and Spring Boot DevTools dependencies in `pom.xml`:
 
 ```xml
 <dependency>
@@ -78,7 +80,6 @@ Let's create a simple Spring Boot application `di-demo` to see how all these wor
   <artifactId>spring-boot-devtools</artifactId>
   <scope>runtime</scope>
 </dependency>
-</dependencies>
 ```
 
 Let's create `MathTeacher.java` and `ScienceTeacher.java` classes:
@@ -86,7 +87,7 @@ Let's create `MathTeacher.java` and `ScienceTeacher.java` classes:
 `MathTeacher.java`
 
 ```java
-public class MathTeacher  {
+public class MathTeacher {
   public String teach() {
     return "Teaching Math";
   }
@@ -96,7 +97,7 @@ public class MathTeacher  {
 `ScienceTeacher.java`
 
 ```java
-public class ScienceTeacher  {
+public class ScienceTeacher {
   public String teach() {
     return "Teaching Science";
   }
@@ -127,9 +128,9 @@ Test out the endpoints.
 
 Currently we are creating the instances ourselves. Let's use dependency injection instead.
 
-In order to use dependency injection, we need to let Spring Boot know that `MathTeacher` and `ScienceTeacher` are Spring Beans. Remember that beans are just classes that are managed by Spring. We can do this by annotating them with `@Component`. After you do this, you can see these beans in your Spring Boot Dashboard.
+In order to use dependency injection, we need to let Spring Boot know that `MathTeacher` and `ScienceTeacher` are Spring Beans. We can do this by annotating them with `@Component`. After you do this, you can see these beans in your Spring Boot Dashboard.
 
-Let's use field injection for the science teacher by adding the `Autowired` annotation to the `scienceTeacher` field:
+Let's use field injection for the science teacher by adding the `@Autowired` annotation to the `scienceTeacher` field:
 
 ```java
 // private ScienceTeacher scienceTeacher = new ScienceTeacher();
@@ -184,13 +185,13 @@ MathTeacher mathTeacher = new MathTeacher();
 teacherController.setMathTeacher(mathTeacher);
 ```
 
-### 👨‍💻 Activity
+### 👨‍💻 Activity **(10 minutes)**
 
-Add a `CodingTeacher` and use constructor injection to inject into the `TeacherController`.
+Add a `CodingTeacher` and use constructor injection to inject it into the `TeacherController`.
 
-Add an `AlgorithmsTeacher` and use setter injection to inject into the `TeacherController`.
+Add an `AlgorithmsTeacher` and use setter injection to inject it into the `TeacherController`.
 
-Add a `DatabaseTeacher` and use field injection to inject into the `TeacherController`.
+Add a `DatabaseTeacher` and use field injection to inject it into the `TeacherController`.
 
 Add the corresponding endpoints to test out the beans.
 
@@ -198,12 +199,12 @@ Add the corresponding endpoints to test out the beans.
 
 ## Part 4: @Bean
 
-Other than using `@Component` to configure instances, `@Bean` can be used to configure instances that contains default configuration.
+Other than using `@Component` to configure instances, `@Bean` can be used to configure instances that contain default configuration.
 
 Usage examples:
 
-- You want to autowire an email service instance with pre-defined SMTP settings. SMTP Settings such as your email address and email server details. These details are specific to the organization.
-- You want to use an external library such as DocuSign for digital signing purposes.
+- You want to autowire an email service instance with pre-defined SMTP settings such as your email address and email server details.
+- You want to use an external library such as DocuSign for digital signing purposes — since you don't have access to the library's source code, you can't annotate it with `@Component`, so `@Bean` is the way to go.
 
 Let's create a dummy email service:
 
@@ -225,14 +226,12 @@ public class EmailService {
   public void setReplyTo(String replyTo) {
     this.replyTo = replyTo;
   }
-
 }
 ```
 
-And now we want to use this class as a bean. We can do this by annotating a method with `@Bean` in a `@Configuration` class. The `@Configuration` annotation indicates that the class contains `@Bean` annotations which Spring will pick up and add them into the spring container.
+And now we want to use this class as a bean. We can do this by annotating a method with `@Bean` in a `@Configuration` class. The `@Configuration` annotation indicates that the class contains `@Bean` methods which Spring will pick up and add into the spring container.
 
 ```java
-
 @Configuration
 public class EmailConfig {
 
@@ -243,7 +242,6 @@ public class EmailConfig {
     emailService.setReplyTo("nickfury@avengers.com");
     return emailService;
   }
-
 }
 ```
 
@@ -262,15 +260,11 @@ public String scienceTeacher() {
 }
 ```
 
-You can also see the beans in Spring Boot Dashboard now.
+You can also see the beans in the Spring Boot Dashboard now.
 
 Test calling the `/science-teacher` endpoint.
 
-In this example, if you noticed, actually we could have annotated the `EmailService` class with `@Component` instead of creating a `@Configuration` class. And that would allow us to inject the `EmailService` bean directly into the `TeacherController` without having to create a `@Bean` method.
-
-However, sometimes, we may be using some other library that we do not have access to the source code of the class that we want to use as a bean. In such cases, we can use `@Bean` to create a bean of that class.
-
-This is just a basic example to demonstrate the use of `@Bean`. In real-world scenarios, beans often have more complex configurations and dependencies.
+In this example, we could have annotated the `EmailService` class with `@Component` directly. However, `@Bean` is the right approach when the class belongs to an external library whose source code you cannot modify. This is just a basic example — in real-world scenarios, beans often have more complex configurations and dependencies.
 
 ---
 
@@ -282,7 +276,7 @@ So far, all of our code is in the controller layer. This is not ideal because we
 
 ### Single Responsibility Principle
 
-In programming, SOLID is a mnemonic acronym for five design principles intended to make software designs more understandable, flexible and maintainable. The **Single Responsibility Principle (SRP)** states that every class should have a single responsibility, and that responsibility should be entirely encapsulated by the class. All its services should be narrowly aligned with that responsibility.
+In programming, SOLID is a mnemonic acronym for five design principles intended to make software designs more understandable, flexible and maintainable. The **Single Responsibility Principle (SRP)** states that every class should have a single responsibility, and that responsibility should be entirely encapsulated by the class.
 
 <img src="https://miro.medium.com/v2/resize:fit:1000/format:webp/1*PxIES4LBAMi8K4RudiP-tw.jpeg">
 
@@ -302,17 +296,15 @@ The Service and Repository pattern is a common design pattern used in Java appli
 
 Instead of putting all our code in the controller layer, we can separate our code into 3 different layers:
 
-| Layer      | Purpose                             |
-| ---------- | ----------------------------------- |
+| Layer | Purpose |
+|---|---|
 | Controller | Handles HTTP requests and responses |
-| Service    | Handles business logic              |
-| Repository | Handles CRUD operations             |
+| Service | Handles business logic |
+| Repository | Handles CRUD operations |
 
 The controller should only handle HTTP requests and responses. The repository should only handle CRUD operations. The service should handle all the business logic e.g. validation, data manipulation, etc.
 
 Hence, it is often suggested to have **thin controllers/repositories and fat services**. This helps to keep the controllers and repositories simple and easy to maintain. More importantly, it centralizes all the business logic in the service layer.
-
-This can help to achieve the goal of creating an architecture that supports easy maintenance, testing, and scalability, while keeping your codebase organized and readable.
 
 ---
 
@@ -332,7 +324,7 @@ public class CustomerRepository {
 
   private ArrayList<Customer> customers = new ArrayList<>();
 
-    // Preload data here now
+  // Preload data here now
   public CustomerRepository() {
     customers.add(new Customer("Peter", "Parker"));
     customers.add(new Customer("Stephen", "Strange"));
@@ -371,7 +363,6 @@ public class CustomerRepository {
   public void deleteCustomer(int index) {
     customers.remove(index);
   }
-
 }
 ```
 
@@ -379,13 +370,11 @@ As you can see, the purpose of this layer is just to perform CRUD operations on 
 
 ### Service Layer
 
-Next, we will create a `CustomerService` class to handle all the business logic (i.e. decisions, processing or computations regarding our data).
+Next, we will create a `CustomerService` class to handle all the business logic.
 
-`CustomerService` will need to call our `CustomerRepository` to perform CRUD operations on our `ArrayList` since updating the data store is the responsibility of the repository layer. That also means that `CustomerService` needs an instance of `CustomerRepository` to perform CRUD operations.
+`CustomerService` will need to call our `CustomerRepository` to perform CRUD operations since updating the data store is the responsibility of the repository layer. We also want to move our helper function `getCustomerIndex()` from `CustomerController` to `CustomerService` because it is part of the business logic.
 
-We also want to move our helper function `getCustomerIndex()` from `CustomerController` to `CustomerService` because it is part of the business logic.
-
-The service class needs to be annotated with `@Service` to let Spring Boot know that it is a Spring Bean. The `@Service` annotation is a specialization of the `@Component` annotation with additional functionality for service layer classes.
+The service class needs to be annotated with `@Service` to let Spring Boot know that it is a Spring Bean. The `@Service` annotation is a specialization of the `@Component` annotation.
 
 ```java
 @Service
@@ -414,16 +403,13 @@ public class CustomerService {
   }
 
   private int getCustomerIndex(String id) {
-
     for (Customer customer : customerRepository.getAllCustomers()) {
       if (customer.getId().equals(id)) {
         return customerRepository.getAllCustomers().indexOf(customer);
       }
     }
-
     throw new CustomerNotFoundException(id);
   }
-
 }
 ```
 
@@ -455,7 +441,6 @@ public class CustomerController {
   // READ (GET ONE)
   @GetMapping("{id}")
   public ResponseEntity<Customer> getCustomer(@PathVariable String id) {
-
     try {
       Customer foundCustomer = customerService.getCustomer(id);
       return new ResponseEntity<>(foundCustomer, HttpStatus.OK);
@@ -467,10 +452,9 @@ public class CustomerController {
   // UPDATE
   @PutMapping("{id}")
   public ResponseEntity<Customer> updateCustomer(@PathVariable String id, @RequestBody Customer customer) {
-
     try {
       Customer updatedCustomer = customerService.updateCustomer(id, customer);
-    return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
+      return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
     } catch (CustomerNotFoundException e) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -479,7 +463,6 @@ public class CustomerController {
   // DELETE
   @DeleteMapping("{id}")
   public ResponseEntity<HttpStatus> deleteCustomer(@PathVariable String id) {
-
     try {
       customerService.deleteCustomer(id);
       return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -494,36 +477,21 @@ Test the endpoints again after refactoring the code. They should still work as b
 
 ### Using Dependency Injection
 
-In our current code, we have been creating new instances of our service and repository classes.
+In our current code, we have been creating new instances of our service and repository classes. The problem with this approach is that we are tightly coupling our code to the implementation of these classes. We are also creating unnecessary instances when we only need one.
 
-The problem with this approach is that we are tightly coupling our code to the implementation of the service and repository classes. We are also creating unnecessary instances of our service and repository classes when we only need one instance.
+Service classes like `CustomerService` are designed to provide specific functionalities — not to hold data. So how many instances of `CustomerService` do we need in one application? Just one. Creating more is a waste of resources. This is why we should let Spring Boot create and manage the instances for us via Dependency Injection.
 
-In Java, we have data-holding classes whose purpose is to store data e.g. POJOs. At the same time, we also have service classes that are designed to provide specific functionalities. Our `CustomerService` class, for example, is designed to do that.
+### 👨‍💻 Activity **(10 minutes)**
 
-So, how many instances of `CustomerService` do we need in one application? Actually, we only need one. Creating more instances is a waste of resources because we only need one instance to provide the functionalities that we need.
-
-This is why we should not create instances of our service and repository classes. Instead, we should let Spring Boot create the instances for us and inject them into our controller.
-
-### 👨‍💻 Activity
-
-Modify the code to use dependency injection (constructor) instead.
+Modify the `CustomerController` and `CustomerService` to use constructor injection instead of creating instances with `new`.
 
 ### Coding to an Interface
 
-Recall that an interface is a contract that specifies the methods that a class must implement e.g.
-
-```java
-public interface Food {
-  // This method must be implemented by any class that implements the Food interface
-  String getFlavour();
-}
-```
-
-**Coding to an interface** means writing our code to be dependent on an interface instead of a concrete class. This promotes loose coupling and makes our code more flexible.
+**Coding to an interface** means writing our code to be dependent on an interface instead of a concrete class. This promotes loose coupling and makes our code more flexible and easy to change.
 
 For our service layer, it is a good practice to code to an interface. This is because we may want to change the implementation of our service layer in the future.
 
-Let's rename our `CustomerService.java` to `CustomerServiceImpl.java` and create a new interface called `CustomerService.java` with the all the method signatures:
+Let's rename our `CustomerService.java` to `CustomerServiceImpl.java` and create a new interface called `CustomerService.java` with all the method signatures:
 
 ```java
 public interface CustomerService {
@@ -544,7 +512,7 @@ public class CustomerServiceImpl implements CustomerService {
 }
 ```
 
-Note that we do not have to change anything in `CustomerController.java` as it is already using the `CustomerService` bean.
+Note that we do not have to change anything in `CustomerController.java` as it is already using the `CustomerService` type:
 
 ```java
 private CustomerService customerService;
@@ -559,11 +527,9 @@ When Spring Boot encounters a `CustomerService` type dependency in the `Customer
 
 Test the endpoints again to make sure they still work.
 
-Why is this useful? Because now we can easily change the implementation of our service layer without having to change the code in our controller layer.
+### @Primary and @Qualifier
 
-Let's say we want to have an implementation of our service layer that logs all the method calls.
-
-Create a new `CustomerService` implementation called `CustomerServiceWithLoggingImpl.java`. Copy the code from `CustomerServiceImpl.java` and paste it into `CustomerServiceWithLoggingImpl.java`.
+Now let's say we want a second implementation of our service layer that logs all method calls. Create `CustomerServiceWithLoggingImpl.java`:
 
 ```java
 import org.slf4j.Logger;
@@ -573,7 +539,8 @@ import org.slf4j.LoggerFactory;
 public class CustomerServiceWithLoggingImpl implements CustomerService {
 
   private final Logger logger = LoggerFactory.getLogger(CustomerServiceWithLoggingImpl.class);
-  // ...
+
+  // ... copy all methods from CustomerServiceImpl ...
 
   @Override
   public ArrayList<Customer> getAllCustomers() {
@@ -583,19 +550,15 @@ public class CustomerServiceWithLoggingImpl implements CustomerService {
 }
 ```
 
-Now when you try to run the application, you will get an error like this:
+Now when you try to run the application, you will get an error:
 
 ```
-Parameter 0 of constructor in com.example.simplecrm.controller.CustomerController required a single bean, but 2 were found:
+Parameter 0 of constructor in CustomerController required a single bean, but 2 were found
 ```
 
-Why did this happen?
+This is because Spring Boot does not know which bean to inject since we have 2 beans that implement the `CustomerService` interface. There are two ways to resolve this.
 
-This is because Spring Boot does not know which bean to inject into the `CustomerController` since we have 2 beans that implement the `CustomerService` interface.
-
-How do we tell Spring Boot which implementation to use?
-
-The first way is to annotate the `CustomerServiceImpl` class with `@Primary`:
+The first way is to annotate `CustomerServiceImpl` with `@Primary` to mark it as the default implementation:
 
 ```java
 @Primary
@@ -605,30 +568,24 @@ public class CustomerServiceImpl implements CustomerService {
 }
 ```
 
-The second way is to specify the name of the bean in the `@Qualifier` annotation when we inject the dependency into the `CustomerController`.
-
-The name of the bean is the name of the class with the first letter in lowercase.
+The second way is to use `@Qualifier` in the controller to specify exactly which implementation to inject. The bean name is the class name with the first letter in lowercase:
 
 ```java
-private CustomerService customerService;
-
-// Constructor Injection
 public CustomerController(@Qualifier("customerServiceWithLoggingImpl") CustomerService customerService) {
   this.customerService = customerService;
 }
 ```
 
-Thus, we can see that by coding to an interface, we can easily change the implementation of our service layer without having to change the code in our controller layer.
+By coding to an interface, we can easily swap implementations without touching the controller at all.
 
 ---
 
-## Part 7: Bean Scope
-
-The scope of a bean defines the lifecycle of a bean. It tells Spring Boot how long to keep the bean around and when to create a new instance of the bean.
-
-By default the scope of a bean is singleton but this can be changed as needed. This means that Spring Boot will only create one instance of the bean and reuse it whenever the bean is requested. The singleton is not a Spring Boot concept but a design pattern - you can read more about the Java Singleton design pattern [here](https://www.baeldung.com/java-singleton).
-
-You can read more about bean scope [here](https://www.baeldung.com/spring-bean-scopes).
+> 📖 **Further Reading: Bean Scope**
+>
+> The scope of a bean defines its lifecycle — how long Spring keeps the bean around and when to create a new instance. By default, all Spring beans are **singleton** scoped, meaning Spring creates only one instance and reuses it for the entire application lifetime. This can be changed as needed for your use case.
+>
+> - [Java Singleton Pattern — Baeldung](https://www.baeldung.com/java-singleton)
+> - [Spring Bean Scopes — Baeldung](https://www.baeldung.com/spring-bean-scopes)
 
 ---
 
