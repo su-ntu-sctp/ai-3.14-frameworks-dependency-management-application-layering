@@ -434,14 +434,20 @@ public class CustomerService {
 
 ### Controller Layer
 
-Finally, we will modify our `CustomerController` to use the `CustomerService` class.
+Finally, we will modify our `CustomerController` to use the `CustomerService` class. Notice we are using constructor injection here — we let Spring manage the `CustomerService` instance for us instead of creating it with `new`.
+
+> 📝 **Why not use `new CustomerService()` here?** Service classes like `CustomerService` are designed to provide functionality — not to hold data. We only ever need one instance of it in the entire application. If every class that needs `CustomerService` called `new CustomerService()`, we'd end up with multiple unnecessary instances. By using constructor injection, Spring creates exactly one instance and reuses it everywhere — this is the **Singleton pattern**, which is the default behaviour for all Spring beans. You can read more about bean scopes [here](https://www.baeldung.com/spring-bean-scopes).
 
 ```java
 @RestController
 @RequestMapping("/customers")
 public class CustomerController {
 
-  private CustomerService customerService = new CustomerService();
+  private final CustomerService customerService;
+
+  public CustomerController(CustomerService customerService) {
+    this.customerService = customerService;
+  }
 
   // CREATE
   @PostMapping("")
@@ -492,58 +498,9 @@ public class CustomerController {
 }
 ```
 
+Notice that `customerService` is declared `final`. This is a best practice with constructor injection — since the dependency is set once in the constructor and never changes, marking it `final` makes that explicit and prevents accidental reassignment.
+
 Test the endpoints again after refactoring the code. They should still work as before.
-
-### Using Dependency Injection
-
-In our current code, we have been creating new instances of our service and repository classes. The problem with this approach is that we are tightly coupling our code to the implementation of these classes. We are also creating unnecessary instances when we only need one.
-
-Service classes like `CustomerService` are designed to provide specific functionalities — not to hold data. So how many instances of `CustomerService` do we need in one application? Just one. Creating more is a waste of resources.
-
-> 📝 **This is the Singleton pattern.** By default, all Spring beans are **singleton** scoped — Spring creates exactly one instance of each bean and reuses it for the entire application lifetime. This is exactly why we let Spring manage our instances via DI instead of calling `new` ourselves. You can read more about bean scopes [here](https://www.baeldung.com/spring-bean-scopes).
-
-This is why we should let Spring Boot create and manage the instances for us via Dependency Injection.
-
-### 👨‍💻 Activity **(10 minutes)**
-
-Modify the `CustomerController` and `CustomerService` to use constructor injection instead of creating instances with `new`.
-
-**Solution:**
-
-`CustomerService.java` — inject `CustomerRepository` via constructor:
-
-```java
-@Service
-public class CustomerService {
-
-  private final CustomerRepository customerRepository;
-
-  public CustomerService(CustomerRepository customerRepository) {
-    this.customerRepository = customerRepository;
-  }
-
-  // ... rest of the methods unchanged
-}
-```
-
-`CustomerController.java` — inject `CustomerService` via constructor:
-
-```java
-@RestController
-@RequestMapping("/customers")
-public class CustomerController {
-
-  private final CustomerService customerService;
-
-  public CustomerController(CustomerService customerService) {
-    this.customerService = customerService;
-  }
-
-  // ... rest of the methods unchanged
-}
-```
-
-Notice that the fields are now `final`. This is a best practice with constructor injection — since the dependency is set once in the constructor and never changes, marking it `final` makes that explicit and prevents accidental reassignment.
 
 ### Coding to an Interface
 
