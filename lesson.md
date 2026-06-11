@@ -65,8 +65,10 @@ Classes that are annotated with `@Component` are known as **Spring Beans**. Spri
 | Type | Description | Remarks |
 |---|---|---|
 | Constructor | Dependencies are injected through the constructor | Preferred method of dependency injection |
-| Setter | Dependencies are injected through setter methods | Useful when you want to change the dependency later |
-| Field | Dependencies are injected directly into the class property | Not recommended |
+| Setter | Dependencies are injected through setter methods | Legacy approach — rarely used in modern Spring applications |
+| Field | Dependencies are injected directly into the class property | **Do not use** — breaks testability (see note below) |
+
+> ⚠️ **Why field injection is a problem:** When you use field injection, Spring injects the dependency using reflection behind the scenes. This means there is no way to inject a mock or a substitute during unit testing without a Spring container running. In other words, your class becomes impossible to test in isolation. Constructor injection, on the other hand, lets you pass in any implementation directly in a test — no Spring required. This is the primary reason field injection is considered bad practice in production codebases.
 
 Let's create a simple Spring Boot application `di-demo` to see how all these work. Add the Spring Web and Spring Boot DevTools dependencies in `pom.xml`:
 
@@ -140,17 +142,17 @@ private ScienceTeacher scienceTeacher;
 
 Notice now that without having to instantiate the `ScienceTeacher` class, we can still use the `scienceTeacher` bean.
 
-Now, field injection is not ideal because it makes it difficult to test the class (testing is covered in a later lesson). Let's use constructor injection instead:
+Now, field injection is not ideal — see the note above for why. Let's use constructor injection instead:
 
 ```java
-// @Autowired
 private ScienceTeacher scienceTeacher;
 
-@Autowired
 public TeacherController(ScienceTeacher scienceTeacher) {
   this.scienceTeacher = scienceTeacher;
 }
 ```
+
+> 📝 **Note:** In older Spring code, you will often see `@Autowired` on constructors. Since Spring 4.3, if a class has only one constructor, Spring automatically uses it for injection — **`@Autowired` is no longer needed on constructors**. This is now the standard practice. You may still see it in legacy codebases, but new code should omit it.
 
 Test it out to make sure it still works.
 
@@ -168,11 +170,12 @@ Now, let's see how setter injection works on the MathTeacher bean:
 ```java
 private MathTeacher mathTeacher;
 
-@Autowired
 public void setMathTeacher(MathTeacher mathTeacher) {
   this.mathTeacher = mathTeacher;
 }
 ```
+
+> 📝 **Note:** Setter injection was more common in early Spring applications (pre-Spring 3). In modern Spring applications, constructor injection is strongly preferred. Setter injection is considered a **legacy pattern** — you may encounter it in older codebases, but it is rarely written in new production code. The main use case it was designed for (optional dependencies that could be changed after construction) is now handled better through other patterns.
 
 Then call the `/math-teacher` endpoint to test it out.
 
@@ -316,7 +319,17 @@ Since the repository layer is responsible for CRUD operations, we will create a 
 
 Only the repository should have access to the data store. Hence the `ArrayList` should be private and only accessible within the `CustomerRepository` class.
 
-This class also needs to be annotated with `@Repository` to let Spring Boot know that it is a Spring Bean. The `@Repository` annotation is a specialization of the `@Component` annotation with additional functionality for persistence layer exceptions.
+This class also needs to be annotated with `@Repository` to let Spring Boot know that it is a Spring Bean.
+
+> 📝 **`@Component` vs `@Service` vs `@Repository` — What's the difference?**
+>
+> All three annotations register a class as a Spring Bean. The difference is in **intent and behaviour**:
+>
+> - `@Component` — The generic stereotype. Use it when the class doesn't clearly fit as a service or repository.
+> - `@Service` — A specialization of `@Component`. It carries no extra technical behaviour today, but it communicates clearly that this class contains **business logic**. Frameworks and tools can also use this marker for additional processing in future.
+> - `@Repository` — A specialization of `@Component` with one important technical addition: Spring automatically translates **persistence-layer exceptions** (e.g. database errors) into Spring's unified `DataAccessException` hierarchy. This makes error handling consistent regardless of whether you're using JDBC, JPA, or any other data access technology. Always use `@Repository` on your data access classes.
+>
+> In short: use the most specific annotation that fits. It makes your intent clear to other developers and to the framework.
 
 ```java
 @Repository
@@ -343,7 +356,7 @@ public class CustomerRepository {
   }
 
   // Get All
-  public ArrayList<Customer> getAllCustomers() {
+  public List<Customer> getAllCustomers() {
     return customers;
   }
 
@@ -366,6 +379,8 @@ public class CustomerRepository {
 }
 ```
 
+> 📝 **Why `List<Customer>` instead of `ArrayList<Customer>`?** Coding to an interface applies to collections too, not just your own classes. By returning `List<Customer>` instead of `ArrayList<Customer>`, you keep the flexibility to swap the underlying implementation (e.g. to `LinkedList`) without changing any calling code. This is standard industry practice — always return the interface type, not the concrete collection class.
+
 As you can see, the purpose of this layer is just to perform CRUD operations on our `ArrayList`. It does not contain any business logic.
 
 ### Service Layer
@@ -380,7 +395,11 @@ The service class needs to be annotated with `@Service` to let Spring Boot know 
 @Service
 public class CustomerService {
 
-  private CustomerRepository customerRepository = new CustomerRepository();
+  private final CustomerRepository customerRepository;
+
+  public CustomerService(CustomerRepository customerRepository) {
+    this.customerRepository = customerRepository;
+  }
 
   public Customer createCustomer(Customer customer) {
     return customerRepository.createCustomer(customer);
@@ -390,7 +409,7 @@ public class CustomerService {
     return customerRepository.getCustomer(getCustomerIndex(id));
   }
 
-  public ArrayList<Customer> getAllCustomers() {
+  public List<Customer> getAllCustomers() {
     return customerRepository.getAllCustomers();
   }
 
@@ -433,8 +452,8 @@ public class CustomerController {
 
   // READ (GET ALL)
   @GetMapping("")
-  public ResponseEntity<ArrayList<Customer>> getAllCustomers() {
-    ArrayList<Customer> allCustomers = customerService.getAllCustomers();
+  public ResponseEntity<List<Customer>> getAllCustomers() {
+    List<Customer> allCustomers = customerService.getAllCustomers();
     return new ResponseEntity<>(allCustomers, HttpStatus.OK);
   }
 
@@ -479,11 +498,52 @@ Test the endpoints again after refactoring the code. They should still work as b
 
 In our current code, we have been creating new instances of our service and repository classes. The problem with this approach is that we are tightly coupling our code to the implementation of these classes. We are also creating unnecessary instances when we only need one.
 
-Service classes like `CustomerService` are designed to provide specific functionalities — not to hold data. So how many instances of `CustomerService` do we need in one application? Just one. Creating more is a waste of resources. This is why we should let Spring Boot create and manage the instances for us via Dependency Injection.
+Service classes like `CustomerService` are designed to provide specific functionalities — not to hold data. So how many instances of `CustomerService` do we need in one application? Just one. Creating more is a waste of resources.
+
+> 📝 **This is the Singleton pattern.** By default, all Spring beans are **singleton** scoped — Spring creates exactly one instance of each bean and reuses it for the entire application lifetime. This is exactly why we let Spring manage our instances via DI instead of calling `new` ourselves. You can read more about bean scopes [here](https://www.baeldung.com/spring-bean-scopes).
+
+This is why we should let Spring Boot create and manage the instances for us via Dependency Injection.
 
 ### 👨‍💻 Activity **(10 minutes)**
 
 Modify the `CustomerController` and `CustomerService` to use constructor injection instead of creating instances with `new`.
+
+**Solution:**
+
+`CustomerService.java` — inject `CustomerRepository` via constructor:
+
+```java
+@Service
+public class CustomerService {
+
+  private final CustomerRepository customerRepository;
+
+  public CustomerService(CustomerRepository customerRepository) {
+    this.customerRepository = customerRepository;
+  }
+
+  // ... rest of the methods unchanged
+}
+```
+
+`CustomerController.java` — inject `CustomerService` via constructor:
+
+```java
+@RestController
+@RequestMapping("/customers")
+public class CustomerController {
+
+  private final CustomerService customerService;
+
+  public CustomerController(CustomerService customerService) {
+    this.customerService = customerService;
+  }
+
+  // ... rest of the methods unchanged
+}
+```
+
+Notice that the fields are now `final`. This is a best practice with constructor injection — since the dependency is set once in the constructor and never changes, marking it `final` makes that explicit and prevents accidental reassignment.
 
 ### Coding to an Interface
 
@@ -497,7 +557,7 @@ Let's rename our `CustomerService.java` to `CustomerServiceImpl.java` and create
 public interface CustomerService {
   Customer createCustomer(Customer customer);
   Customer getCustomer(String id);
-  ArrayList<Customer> getAllCustomers();
+  List<Customer> getAllCustomers();
   Customer updateCustomer(String id, Customer customer);
   void deleteCustomer(String id);
 }
@@ -508,16 +568,54 @@ Next, our `CustomerServiceImpl` class should implement the `CustomerService` int
 ```java
 @Service
 public class CustomerServiceImpl implements CustomerService {
-  // ...
+
+  private final CustomerRepository customerRepository;
+
+  public CustomerServiceImpl(CustomerRepository customerRepository) {
+    this.customerRepository = customerRepository;
+  }
+
+  @Override
+  public Customer createCustomer(Customer customer) {
+    return customerRepository.createCustomer(customer);
+  }
+
+  @Override
+  public Customer getCustomer(String id) {
+    return customerRepository.getCustomer(getCustomerIndex(id));
+  }
+
+  @Override
+  public List<Customer> getAllCustomers() {
+    return customerRepository.getAllCustomers();
+  }
+
+  @Override
+  public Customer updateCustomer(String id, Customer customer) {
+    return customerRepository.updateCustomer(getCustomerIndex(id), customer);
+  }
+
+  @Override
+  public void deleteCustomer(String id) {
+    customerRepository.deleteCustomer(getCustomerIndex(id));
+  }
+
+  private int getCustomerIndex(String id) {
+    for (Customer customer : customerRepository.getAllCustomers()) {
+      if (customer.getId().equals(id)) {
+        return customerRepository.getAllCustomers().indexOf(customer);
+      }
+    }
+    throw new CustomerNotFoundException(id);
+  }
 }
 ```
 
 Note that we do not have to change anything in `CustomerController.java` as it is already using the `CustomerService` type:
 
 ```java
-private CustomerService customerService;
+private final CustomerService customerService;
 
-// Constructor Injection
 public CustomerController(CustomerService customerService) {
   this.customerService = customerService;
 }
@@ -538,14 +636,50 @@ import org.slf4j.LoggerFactory;
 @Service
 public class CustomerServiceWithLoggingImpl implements CustomerService {
 
-  private final Logger logger = LoggerFactory.getLogger(CustomerServiceWithLoggingImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(CustomerServiceWithLoggingImpl.class);
+  private final CustomerRepository customerRepository;
 
-  // ... copy all methods from CustomerServiceImpl ...
+  public CustomerServiceWithLoggingImpl(CustomerRepository customerRepository) {
+    this.customerRepository = customerRepository;
+  }
 
   @Override
-  public ArrayList<Customer> getAllCustomers() {
+  public Customer createCustomer(Customer customer) {
+    logger.info("CustomerServiceWithLoggingImpl.createCustomer() called");
+    return customerRepository.createCustomer(customer);
+  }
+
+  @Override
+  public Customer getCustomer(String id) {
+    logger.info("CustomerServiceWithLoggingImpl.getCustomer() called");
+    return customerRepository.getCustomer(getCustomerIndex(id));
+  }
+
+  @Override
+  public List<Customer> getAllCustomers() {
     logger.info("CustomerServiceWithLoggingImpl.getAllCustomers() called");
     return customerRepository.getAllCustomers();
+  }
+
+  @Override
+  public Customer updateCustomer(String id, Customer customer) {
+    logger.info("CustomerServiceWithLoggingImpl.updateCustomer() called");
+    return customerRepository.updateCustomer(getCustomerIndex(id), customer);
+  }
+
+  @Override
+  public void deleteCustomer(String id) {
+    logger.info("CustomerServiceWithLoggingImpl.deleteCustomer() called");
+    customerRepository.deleteCustomer(getCustomerIndex(id));
+  }
+
+  private int getCustomerIndex(String id) {
+    for (Customer customer : customerRepository.getAllCustomers()) {
+      if (customer.getId().equals(id)) {
+        return customerRepository.getAllCustomers().indexOf(customer);
+      }
+    }
+    throw new CustomerNotFoundException(id);
   }
 }
 ```
