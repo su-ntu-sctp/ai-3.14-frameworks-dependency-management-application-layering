@@ -170,12 +170,15 @@ Now, let's see how setter injection works on the MathTeacher bean:
 ```java
 private MathTeacher mathTeacher;
 
+@Autowired
 public void setMathTeacher(MathTeacher mathTeacher) {
   this.mathTeacher = mathTeacher;
 }
 ```
 
 > 📝 **Note:** Setter injection was more common in early Spring applications (pre-Spring 3). In modern Spring applications, constructor injection is strongly preferred. Setter injection is considered a **legacy pattern** — you may encounter it in older codebases, but it is rarely written in new production code. The main use case it was designed for (optional dependencies that could be changed after construction) is now handled better through other patterns.
+>
+> ⚠️ **Important:** Unlike constructor injection, setter injection is **never auto-detected** by Spring — even if there is only one setter. You must explicitly annotate the setter with `@Autowired`, or Spring will never call it, leaving the field `null` and causing a `NullPointerException` when it's used.
 
 Then call the `/math-teacher` endpoint to test it out.
 
@@ -520,7 +523,7 @@ public interface CustomerService {
 }
 ```
 
-Next, our `CustomerServiceImpl` class should implement the `CustomerService` interface:
+Next, our `CustomerServiceImpl` class should implement the `CustomerService` interface. **Remember to add the `implements CustomerService` clause** — renaming the class alone does not make it implement the new interface, and if this step is missed, `CustomerServiceImpl` will not be considered a valid candidate for `CustomerService` type injection later on:
 
 ```java
 @Service
@@ -668,6 +671,8 @@ public CustomerController(@Qualifier("customerServiceWithLoggingImpl") CustomerS
 ```
 
 By coding to an interface, we can easily swap implementations without touching the controller at all.
+
+> 📝 **Note:** `@Primary` and `@Qualifier` can be used together. If both are present, `@Qualifier` at the injection point wins over `@Primary` on the bean — it's a more specific instruction at the point of use.
 
 ---
 
