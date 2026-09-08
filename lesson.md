@@ -84,44 +84,44 @@ Let's create a simple Spring Boot application `di-demo` to see how all these wor
 </dependency>
 ```
 
-Let's create `MathTeacher.java` and `ScienceTeacher.java` classes:
+We will build a small order-processing example. Let's create `TaxCalculator.java` and `ShippingCalculator.java` classes:
 
-`MathTeacher.java`
+`TaxCalculator.java`
 
 ```java
-public class MathTeacher {
-  public String teach() {
-    return "Teaching Math";
+public class TaxCalculator {
+  public String calculate() {
+    return "Tax calculated at 9% GST";
   }
 }
 ```
 
-`ScienceTeacher.java`
+`ShippingCalculator.java`
 
 ```java
-public class ScienceTeacher {
-  public String teach() {
-    return "Teaching Science";
+public class ShippingCalculator {
+  public String calculate() {
+    return "Shipping calculated at $4.50 flat rate";
   }
 }
 ```
 
-Create `TeacherController.java`:
+Create `OrderController.java`:
 
 ```java
 @RestController
-public class TeacherController {
-  private MathTeacher mathTeacher = new MathTeacher();
-  private ScienceTeacher scienceTeacher = new ScienceTeacher();
+public class OrderController {
+  private TaxCalculator taxCalculator = new TaxCalculator();
+  private ShippingCalculator shippingCalculator = new ShippingCalculator();
 
-  @GetMapping("/math-teacher")
-  public String mathTeacher() {
-    return mathTeacher.teach();
+  @GetMapping("/tax")
+  public String tax() {
+    return taxCalculator.calculate();
   }
 
-  @GetMapping("/science-teacher")
-  public String scienceTeacher() {
-    return scienceTeacher.teach();
+  @GetMapping("/shipping")
+  public String shipping() {
+    return shippingCalculator.calculate();
   }
 }
 ```
@@ -130,25 +130,27 @@ Test out the endpoints.
 
 Currently we are creating the instances ourselves. Let's use dependency injection instead.
 
-In order to use dependency injection, we need to let Spring Boot know that `MathTeacher` and `ScienceTeacher` are Spring Beans. We can do this by annotating them with `@Component`. After you do this, you can see these beans in your Spring Boot Dashboard.
+In order to use dependency injection, we need to let Spring Boot know that `TaxCalculator` and `ShippingCalculator` are Spring Beans. We can do this by annotating them with `@Component`. After you do this, you can see these beans in your Spring Boot Dashboard.
 
-Let's use field injection for the science teacher by adding the `@Autowired` annotation to the `scienceTeacher` field:
+Notice these two classes are a good fit for beans — they **do work** (they calculate something) and they hold no per-request data. This is the same rule from the previous lesson: *inject the things that do work, create the things that hold data.*
+
+Let's use field injection for the shipping calculator by adding the `@Autowired` annotation to the `shippingCalculator` field:
 
 ```java
-// private ScienceTeacher scienceTeacher = new ScienceTeacher();
+// private ShippingCalculator shippingCalculator = new ShippingCalculator();
 @Autowired
-private ScienceTeacher scienceTeacher;
+private ShippingCalculator shippingCalculator;
 ```
 
-Notice now that without having to instantiate the `ScienceTeacher` class, we can still use the `scienceTeacher` bean.
+Notice now that without having to instantiate the `ShippingCalculator` class, we can still use the `shippingCalculator` bean.
 
 Now, field injection is not ideal — see the note above for why. Let's use constructor injection instead:
 
 ```java
-private ScienceTeacher scienceTeacher;
+private ShippingCalculator shippingCalculator;
 
-public TeacherController(ScienceTeacher scienceTeacher) {
-  this.scienceTeacher = scienceTeacher;
+public OrderController(ShippingCalculator shippingCalculator) {
+  this.shippingCalculator = shippingCalculator;
 }
 ```
 
@@ -159,47 +161,37 @@ Test it out to make sure it still works.
 Behind the scenes, what Spring is doing is this:
 
 ```java
-// Create a new instance of ScienceTeacher
-ScienceTeacher scienceTeacher = new ScienceTeacher();
+// Create a new instance of ShippingCalculator
+ShippingCalculator shippingCalculator = new ShippingCalculator();
 // Inject the instance into the constructor
-TeacherController teacherController = new TeacherController(scienceTeacher);
+OrderController orderController = new OrderController(shippingCalculator);
 ```
 
-Now, let's see how setter injection works on the MathTeacher bean:
+Now, let's see how setter injection works on the `TaxCalculator` bean:
 
 ```java
-private MathTeacher mathTeacher;
+private TaxCalculator taxCalculator;
 
 @Autowired
-public void setMathTeacher(MathTeacher mathTeacher) {
-  this.mathTeacher = mathTeacher;
+public void setTaxCalculator(TaxCalculator taxCalculator) {
+  this.taxCalculator = taxCalculator;
 }
 ```
 
-> 📝 **Note:** Setter injection was more common in early Spring applications (pre-Spring 3). In modern Spring applications, constructor injection is strongly preferred. Setter injection is considered a **legacy pattern** — you may encounter it in older codebases, but it is rarely written in new production code. The main use case it was designed for (optional dependencies that could be changed after construction) is now handled better through other patterns.
+> 📝 **Note:** Setter injection was more common in early Spring applications (pre-Spring 3). In modern Spring applications, constructor injection is strongly preferred. Setter injection is considered a **legacy pattern** — you may encounter it in older codebases, but it is rarely written in new production code.
 >
-> ⚠️ **Important:** Unlike constructor injection, setter injection is **never auto-detected** by Spring — even if there is only one setter. You must explicitly annotate the setter with `@Autowired`, or Spring will never call it, leaving the field `null` and causing a `NullPointerException` when it's used.
+> ⚠️ **Important:** Unlike constructor injection, setter injection is **never auto-detected** by Spring — even if there is only one setter. You must explicitly annotate the setter with `@Autowired`, or Spring will never call it, leaving the field `null` and causing a `NullPointerException` when the endpoint is hit.
 
-Then call the `/math-teacher` endpoint to test it out.
+Then call the `/tax` endpoint to test it out.
 
-Behind the scenes, Spring is doing this:
+### 👨‍💻 Activity 1 **(10 minutes)**
 
-```java
-// Create a new instance of MathTeacher
-MathTeacher mathTeacher = new MathTeacher();
-// Inject the instance into the setter
-teacherController.setMathTeacher(mathTeacher);
-```
+In your `di-demo` project:
 
-### 👨‍💻 Activity **(10 minutes)**
+1. Add a `DiscountCalculator` class and use **constructor injection** to inject it into the `OrderController`.
+2. Add an `AuditLogger` class and use **setter injection** to inject it into the `OrderController`.
 
-Add a `CodingTeacher` and use constructor injection to inject it into the `TeacherController`.
-
-Add an `AlgorithmsTeacher` and use setter injection to inject it into the `TeacherController`.
-
-Add a `DatabaseTeacher` and use field injection to inject it into the `TeacherController`.
-
-Add the corresponding endpoints to test out the beans.
+Add the corresponding endpoints (`/discount` and `/audit`) to test out the beans.
 
 ---
 
@@ -212,7 +204,7 @@ Usage examples:
 - You want to autowire an email service instance with pre-defined SMTP settings such as your email address and email server details.
 - You want to use an external library such as DocuSign for digital signing purposes — since you don't have access to the library's source code, you can't annotate it with `@Component`, so `@Bean` is the way to go.
 
-Let's create a dummy email service:
+Let's create a dummy email service that would send an order confirmation:
 
 ```java
 public class EmailService {
@@ -235,7 +227,7 @@ public class EmailService {
 }
 ```
 
-And now we want to use this class as a bean. We can do this by annotating a method with `@Bean` in a `@Configuration` class. The `@Configuration` annotation indicates that the class contains `@Bean` methods which Spring will pick up and add into the spring container.
+We want to use this class as a bean. We do this by annotating a method with `@Bean` inside a `@Configuration` class. The `@Configuration` annotation indicates that the class contains `@Bean` methods which Spring will pick up and add into the spring container.
 
 ```java
 @Configuration
@@ -245,32 +237,37 @@ public class EmailConfig {
   public EmailService emailService() {
     // Configure our email service bean
     EmailService emailService = new EmailService();
-    emailService.setReplyTo("nickfury@avengers.com");
+    emailService.setReplyTo("orders@company.com");
     return emailService;
   }
 }
 ```
 
-The `@Bean` annotation here specifies that the method should be used to create a bean of type `EmailService`. The method's return value is the instance that will be registered as a bean in the Spring container.
+The `@Bean` annotation specifies that the method should be used to create a bean of type `EmailService`. The method's return value is the instance registered as a bean in the Spring container.
 
-Now we can inject this bean in our `TeacherController` and use it:
+Now we can inject this bean into our `OrderController` using constructor injection, and use it:
 
 ```java
-@Autowired
+private ShippingCalculator shippingCalculator;
 private EmailService emailService;
 
-@GetMapping("/science-teacher")
-public String scienceTeacher() {
-  emailService.send("Hello from scienceTeacher()");
-  return scienceTeacher.teach();
+public OrderController(ShippingCalculator shippingCalculator, EmailService emailService) {
+  this.shippingCalculator = shippingCalculator;
+  this.emailService = emailService;
+}
+
+@GetMapping("/shipping")
+public String shipping() {
+  emailService.send("Order confirmation from shipping()");
+  return shippingCalculator.calculate();
 }
 ```
 
-You can also see the beans in the Spring Boot Dashboard now.
+You can also see the bean in the Spring Boot Dashboard now.
 
-Test calling the `/science-teacher` endpoint.
+Test calling the `/shipping` endpoint and check your console output.
 
-In this example, we could have annotated the `EmailService` class with `@Component` directly. However, `@Bean` is the right approach when the class belongs to an external library whose source code you cannot modify. This is just a basic example — in real-world scenarios, beans often have more complex configurations and dependencies.
+In this example, we could have annotated the `EmailService` class with `@Component` directly. However, `@Bean` is the right approach when the class belongs to an external library whose source code you cannot modify.
 
 ---
 
@@ -316,11 +313,24 @@ Hence, it is often suggested to have **thin controllers/repositories and fat ser
 
 ## Part 6: Refactoring Our `simple-crm`
 
+We continue with the same **`simple-crm`** project from the previous lesson. Do not create a new project.
+
+> **Folder structure reminder — standing rule for `simple-crm`.** Every class goes in a folder matching its layer, inside your base package (`sg.edu.ntu.simple_crm`):
+> - `CustomerController` → `controller` folder
+> - `Customer` → `model` folder
+> - `CustomerService` / `CustomerServiceImpl` → `service` folder (create this folder now)
+> - `CustomerRepository` → `repository` folder (create this folder now)
+> - `CustomerNotFoundException` → `exceptions` folder
+>
+> Use **right-click on the class name → Refactor → Move** so the `package` line and all imports update automatically. If the app then fails to start with a `ConflictingBeanDefinitionException`, an old copy of the class is still in the original location — delete it and run `mvn clean`.
+
+> 📝 **If your code looks slightly different from the examples below, that is fine.** In the previous lesson's activity you may have chosen `204 No Content` instead of `200 OK` for delete, or used `ResponseEntity<Object>` to return the exception message. Keep whichever version you built — just apply the same refactoring pattern to it.
+
 ### Repository Layer
 
 Since the repository layer is responsible for CRUD operations, we will create a `CustomerRepository` class to handle all the CRUD operations on our `ArrayList`.
 
-Only the repository should have access to the data store. Hence the `ArrayList` should be private and only accessible within the `CustomerRepository` class.
+Only the repository should have access to the data store. Hence the list should be private and only accessible within the `CustomerRepository` class.
 
 This class also needs to be annotated with `@Repository` to let Spring Boot know that it is a Spring Bean.
 
@@ -329,19 +339,20 @@ This class also needs to be annotated with `@Repository` to let Spring Boot know
 > All three annotations register a class as a Spring Bean. The difference is in **intent and behaviour**:
 >
 > - `@Component` — The generic stereotype. Use it when the class doesn't clearly fit as a service or repository.
-> - `@Service` — A specialization of `@Component`. It carries no extra technical behaviour today, but it communicates clearly that this class contains **business logic**. Frameworks and tools can also use this marker for additional processing in future.
+> - `@Service` — A specialization of `@Component`. It carries no extra technical behaviour today, but it communicates clearly that this class contains **business logic**.
 > - `@Repository` — A specialization of `@Component` with one important technical addition: Spring automatically translates **persistence-layer exceptions** (e.g. database errors) into Spring's unified `DataAccessException` hierarchy. This makes error handling consistent regardless of whether you're using JDBC, JPA, or any other data access technology. Always use `@Repository` on your data access classes.
 >
-> In short: use the most specific annotation that fits. It makes your intent clear to other developers and to the framework.
+> In short: use the most specific annotation that fits.
 
 ```java
 @Repository
 public class CustomerRepository {
 
-  private ArrayList<Customer> customers = new ArrayList<>();
+  private List<Customer> customers = new ArrayList<>();
 
-  // Preload data here now
+  // Preload data here now — moved out of the controller
   public CustomerRepository() {
+    customers.add(new Customer("Bruce", "Banner"));
     customers.add(new Customer("Peter", "Parker"));
     customers.add(new Customer("Stephen", "Strange"));
     customers.add(new Customer("Steve", "Rogers"));
@@ -363,7 +374,7 @@ public class CustomerRepository {
     return customers;
   }
 
-  // Update
+  // Update (full replace of the customer's data)
   public Customer updateCustomer(int index, Customer customer) {
     Customer customerToUpdate = customers.get(index);
     customerToUpdate.setFirstName(customer.getFirstName());
@@ -382,17 +393,27 @@ public class CustomerRepository {
 }
 ```
 
-> 📝 **Why `List<Customer>` instead of `ArrayList<Customer>`?** Coding to an interface applies to collections too, not just your own classes. By returning `List<Customer>` instead of `ArrayList<Customer>`, you keep the flexibility to swap the underlying implementation (e.g. to `LinkedList`) without changing any calling code. This is standard industry practice — always return the interface type, not the concrete collection class.
+Note the field is declared as `List<Customer>`, not `ArrayList<Customer>`. Coding to an interface applies to collections too — this keeps the flexibility to swap the underlying implementation later without changing any calling code.
 
-As you can see, the purpose of this layer is just to perform CRUD operations on our `ArrayList`. It does not contain any business logic.
+> ⚠️ **Important — the `id` no longer changes on update.**
+>
+> In the previous lesson, our update did `customers.set(index, customer)`. That swapped the stored customer out for the object Jackson had just built from the request body — and because `Customer` generates its `id` inline, that new object arrived with a brand new UUID. So after every update, the customer's `id` no longer matched the `id` in the URL.
+>
+> Notice what the repository does instead: it fetches the **existing** customer and copies the new values onto it with setters. Same object, same `id`, updated data.
+>
+> **This is worth being precise about.** `PUT` at the HTTP level does mean *replace the whole representation of the resource* — that part is correct, and it is why we send every field in the request body. But "replace the representation" means replace the resource's **data**, not mint a new resource identity. The `id` identifies the resource; it is not part of the editable data. The new object and new `id` we saw last lesson came from **how we implemented it** (`set()` on the list), not from `PUT` itself. Any HTTP method written that way would behave the same.
+
+> 📝 **Production note — returning the internal list.** `getAllCustomers()` returns the repository's actual list, not a copy. That means anything holding that reference can add or remove customers directly, bypassing the repository entirely. In production you would return a copy (`new ArrayList<>(customers)`) or an unmodifiable view (`Collections.unmodifiableList(customers)`) to protect the data store. We leave it as-is here for simplicity, but this is exactly the kind of encapsulation leak that causes hard-to-trace bugs in real systems.
+
+As you can see, the purpose of this layer is just to perform CRUD operations. It contains no business logic.
 
 ### Service Layer
 
 Next, we will create a `CustomerService` class to handle all the business logic.
 
-`CustomerService` will need to call our `CustomerRepository` to perform CRUD operations since updating the data store is the responsibility of the repository layer. We also want to move our helper function `getCustomerIndex()` from `CustomerController` to `CustomerService` because it is part of the business logic.
+`CustomerService` will need to call our `CustomerRepository` to perform CRUD operations, since updating the data store is the responsibility of the repository layer. We also want to move our helper method `getCustomerIndex()` from `CustomerController` into the service, because finding a customer is business logic.
 
-The service class needs to be annotated with `@Service` to let Spring Boot know that it is a Spring Bean. The `@Service` annotation is a specialization of the `@Component` annotation.
+The service class needs to be annotated with `@Service` to let Spring Boot know that it is a Spring Bean.
 
 ```java
 @Service
@@ -435,11 +456,15 @@ public class CustomerService {
 }
 ```
 
+> 📝 **Our exception handling does not change.** `CustomerNotFoundException` is now thrown from the service instead of the controller, but it is an **unchecked** exception (`extends RuntimeException`), so it travels up through the layers on its own — no `throws` clause needed anywhere. The `try`/`catch` blocks in the controller stay exactly as they are and keep working. Later in the module we will move this handling out of the controller entirely using `@ControllerAdvice`.
+
 ### Controller Layer
 
-Finally, we will modify our `CustomerController` to use the `CustomerService` class. Notice we are using constructor injection here — we let Spring manage the `CustomerService` instance for us instead of creating it with `new`.
+Finally, we modify `CustomerController` to use the `CustomerService` class. Notice we are using constructor injection — we let Spring manage the `CustomerService` instance for us instead of creating it with `new`.
 
-> 📝 **Why not use `new CustomerService()` here?** Service classes like `CustomerService` are designed to provide functionality — not to hold data. We only ever need one instance of it in the entire application. If every class that needs `CustomerService` called `new CustomerService()`, we'd end up with multiple unnecessary instances. By using constructor injection, Spring creates exactly one instance and reuses it everywhere — this is the **Singleton pattern**, which is the default behaviour for all Spring beans. You can read more about bean scopes [here](https://www.baeldung.com/spring-bean-scopes).
+The controller no longer needs the `ArrayList`, the preloaded data in its constructor, or the `getCustomerIndex()` helper. Delete all three — they now live in the repository and service.
+
+> 📝 **Why not use `new CustomerService()` here?** Service classes are designed to provide functionality — not to hold data. We only ever need one instance in the entire application. If every class that needed `CustomerService` called `new CustomerService()`, we'd end up with multiple unnecessary instances. By using constructor injection, Spring creates exactly one instance and reuses it everywhere — the **Singleton pattern**, which is the default behaviour for all Spring beans.
 
 ```java
 @RestController
@@ -467,7 +492,7 @@ public class CustomerController {
   }
 
   // READ (GET ONE)
-  @GetMapping("{id}")
+  @GetMapping("/{id}")
   public ResponseEntity<Customer> getCustomer(@PathVariable String id) {
     try {
       Customer foundCustomer = customerService.getCustomer(id);
@@ -478,7 +503,7 @@ public class CustomerController {
   }
 
   // UPDATE
-  @PutMapping("{id}")
+  @PutMapping("/{id}")
   public ResponseEntity<Customer> updateCustomer(@PathVariable String id, @RequestBody Customer customer) {
     try {
       Customer updatedCustomer = customerService.updateCustomer(id, customer);
@@ -489,7 +514,7 @@ public class CustomerController {
   }
 
   // DELETE
-  @DeleteMapping("{id}")
+  @DeleteMapping("/{id}")
   public ResponseEntity<HttpStatus> deleteCustomer(@PathVariable String id) {
     try {
       customerService.deleteCustomer(id);
@@ -503,13 +528,13 @@ public class CustomerController {
 
 Notice that `customerService` is declared `final`. This is a best practice with constructor injection — since the dependency is set once in the constructor and never changes, marking it `final` makes that explicit and prevents accidental reassignment.
 
-Test the endpoints again after refactoring the code. They should still work as before.
+Test all the endpoints again after refactoring. They should work as before — and check that the `id` now stays the same after a `PUT`.
 
 ### Coding to an Interface
 
 **Coding to an interface** means writing our code to be dependent on an interface instead of a concrete class. This promotes loose coupling and makes our code more flexible and easy to change.
 
-For our service layer, it is a good practice to code to an interface. This is because we may want to change the implementation of our service layer in the future.
+For our service layer, it is good practice to code to an interface, because we may want to change the implementation in the future.
 
 Let's rename our `CustomerService.java` to `CustomerServiceImpl.java` and create a new interface called `CustomerService.java` with all the method signatures:
 
@@ -523,7 +548,7 @@ public interface CustomerService {
 }
 ```
 
-Next, our `CustomerServiceImpl` class should implement the `CustomerService` interface. **Remember to add the `implements CustomerService` clause** — renaming the class alone does not make it implement the new interface, and if this step is missed, `CustomerServiceImpl` will not be considered a valid candidate for `CustomerService` type injection later on:
+Next, our `CustomerServiceImpl` class should implement the `CustomerService` interface. **Remember to add the `implements CustomerService` clause** — renaming the class alone does not make it implement the new interface. If this step is missed, `CustomerServiceImpl` will not be seen as a candidate for `CustomerService` injection, and the behaviour you get later will be confusing rather than a clear error.
 
 ```java
 @Service
@@ -571,7 +596,7 @@ public class CustomerServiceImpl implements CustomerService {
 }
 ```
 
-Note that we do not have to change anything in `CustomerController.java` as it is already using the `CustomerService` type:
+Note that we do not have to change anything in `CustomerController.java`, as it is already using the `CustomerService` type:
 
 ```java
 private final CustomerService customerService;
@@ -581,13 +606,15 @@ public CustomerController(CustomerService customerService) {
 }
 ```
 
-When Spring Boot encounters a `CustomerService` type dependency in the `CustomerController`, it will look for a bean that implements the `CustomerService` interface. Since we have annotated our `CustomerServiceImpl` class with `@Service`, Spring Boot will create a bean of type `CustomerServiceImpl` and inject it into the `CustomerController`.
+When Spring Boot encounters a `CustomerService` type dependency in the `CustomerController`, it looks for a bean that implements the `CustomerService` interface. Since we annotated `CustomerServiceImpl` with `@Service`, Spring Boot creates that bean and injects it into the controller.
 
 Test the endpoints again to make sure they still work.
 
 ### @Primary and @Qualifier
 
-Now let's say we want a second implementation of our service layer that logs all method calls. Create `CustomerServiceWithLoggingImpl.java`:
+Now let's say we want a second implementation of our service layer that logs method calls. Create `CustomerServiceWithLoggingImpl.java` in the `service` folder.
+
+It must implement all five interface methods, but we only need logging on a couple of them to see it working:
 
 ```java
 import org.slf4j.Logger;
@@ -610,26 +637,23 @@ public class CustomerServiceWithLoggingImpl implements CustomerService {
   }
 
   @Override
-  public Customer getCustomer(String id) {
-    logger.info("CustomerServiceWithLoggingImpl.getCustomer() called");
-    return customerRepository.getCustomer(getCustomerIndex(id));
-  }
-
-  @Override
   public List<Customer> getAllCustomers() {
     logger.info("CustomerServiceWithLoggingImpl.getAllCustomers() called");
     return customerRepository.getAllCustomers();
   }
 
   @Override
+  public Customer getCustomer(String id) {
+    return customerRepository.getCustomer(getCustomerIndex(id));
+  }
+
+  @Override
   public Customer updateCustomer(String id, Customer customer) {
-    logger.info("CustomerServiceWithLoggingImpl.updateCustomer() called");
     return customerRepository.updateCustomer(getCustomerIndex(id), customer);
   }
 
   @Override
   public void deleteCustomer(String id) {
-    logger.info("CustomerServiceWithLoggingImpl.deleteCustomer() called");
     customerRepository.deleteCustomer(getCustomerIndex(id));
   }
 
@@ -650,7 +674,7 @@ Now when you try to run the application, you will get an error:
 Parameter 0 of constructor in CustomerController required a single bean, but 2 were found
 ```
 
-This is because Spring Boot does not know which bean to inject since we have 2 beans that implement the `CustomerService` interface. There are two ways to resolve this.
+This is because Spring Boot does not know which bean to inject — we now have 2 beans implementing the `CustomerService` interface. There are two ways to resolve this.
 
 The first way is to annotate `CustomerServiceImpl` with `@Primary` to mark it as the default implementation:
 
@@ -670,9 +694,47 @@ public CustomerController(@Qualifier("customerServiceWithLoggingImpl") CustomerS
 }
 ```
 
-By coding to an interface, we can easily swap implementations without touching the controller at all.
+Try the `@Qualifier` version and hit `GET /customers` — you should see the log line appear in your console, confirming the logging implementation is the one being used.
 
-> 📝 **Note:** `@Primary` and `@Qualifier` can be used together. If both are present, `@Qualifier` at the injection point wins over `@Primary` on the bean — it's a more specific instruction at the point of use.
+By coding to an interface, we can swap implementations without touching any of the controller's endpoint code.
+
+> 📝 **Note:** `@Primary` and `@Qualifier` can be used together. If both are present, `@Qualifier` at the injection point wins over `@Primary` on the bean — it is a more specific instruction at the point of use.
+
+> ⚠️ **Before you finish — clean up.** You are ending this lesson with two `CustomerService` implementations. If you leave both in place with **no** `@Primary` and **no** `@Qualifier`, `simple-crm` will not start next lesson. Do one of these before you close:
+> - Keep `@Primary` on `CustomerServiceImpl`, **or**
+> - Delete `CustomerServiceWithLoggingImpl` now that you have seen how it works
+>
+> Remember `simple-crm` is the project we carry forward for the rest of the module — it needs to be in a working state at the end of every lesson.
+
+---
+
+### 👨‍💻 Activity 2 **(20 minutes)**
+
+In your `simple-crm` project, add a `PATCH` endpoint for updating a customer's contact details.
+
+`PUT` replaces the whole representation — the client has to send every field. `PATCH` is for a **partial** update, where the client sends only what they want changed. We will build the simplest possible version: an endpoint that only ever updates the email and contact number.
+
+You need to touch all three layers:
+
+1. **Repository** — add a method that takes an index and a `Customer`, and sets only the email and contact number on the existing customer.
+2. **Interface** — add the matching method signature to `CustomerService`.
+3. **Implementation** — implement it in `CustomerServiceImpl`, reusing `getCustomerIndex(id)`. (If you deleted the logging implementation, you only need to do this once. If you kept it, you must implement the method in both — that is what implementing an interface means.)
+4. **Controller** — add a `@PatchMapping("/{id}")` endpoint. Return `200 OK` on success, `404 Not Found` if the id does not exist, following the same `try`/`catch` pattern as your other endpoints.
+
+Test it in Postman by sending only the two fields:
+
+```json
+{
+  "email": "bruce.banner@avengers.com",
+  "contactNo": "98765432"
+}
+```
+
+Check that the customer's `id`, first name, last name, job title and year of birth are all unchanged.
+
+> 📝 **What real PATCH implementations do.** Ours is deliberately simple — it always updates the same two fields. A production PATCH endpoint accepts *any* subset of fields and has to work out which ones the client actually sent, so it doesn't accidentally wipe the fields that were left out. We will have the tools to do that properly once we cover validation and database entities later in the module.
+>
+> **Why front-end teams often prefer PATCH:** with `PUT`, an edit form has to send every field back. If another user changed something in the meantime, that change gets silently overwritten. `PATCH` sends only what actually changed, so it is much safer in a multi-user system.
 
 ---
 
