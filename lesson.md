@@ -68,7 +68,9 @@ Classes that are annotated with `@Component` are known as **Spring Beans**. Spri
 | Setter | Dependencies are injected through setter methods | Legacy approach — rarely used in modern Spring applications |
 | Field | Dependencies are injected directly into the class property | **Do not use** — breaks testability (see note below) |
 
-> ⚠️ **Why field injection is a problem:** When you use field injection, Spring injects the dependency using reflection behind the scenes. This means there is no way to inject a mock or a substitute during unit testing without a Spring container running. In other words, your class becomes impossible to test in isolation. Constructor injection, on the other hand, lets you pass in any implementation directly in a test — no Spring required. This is the primary reason field injection is considered bad practice in production codebases.
+> > ⚠️ **Why field injection is a problem:** When we write unit tests, we do not start the Spring container. No Spring means nothing is injecting dependencies for us — so the developer has to supply them by hand. This is the one place where we create objects ourselves with `new`, for example `new CustomerController(...)`, and pass in a **fake** service or repository instead of the real one. We use fakes so the test runs instantly and does not need a real database.
+>
+> Constructor injection makes this easy: the dependency is a parameter, so anyone can pass one in. Setter injection also works, because the setter is public. But with field injection the field is private and there is no constructor parameter and no setter — so in plain Java there is no way in. Your test cannot hand the controller a fake, and you are forced to start a whole Spring container just to test one class. That is why field injection is avoided in production codebases.
 
 Let's create a simple Spring Boot application `di-demo` to see how all these work. Add the Spring Web and Spring Boot DevTools dependencies in `pom.xml`:
 
