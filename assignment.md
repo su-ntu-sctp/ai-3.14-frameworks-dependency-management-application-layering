@@ -39,10 +39,7 @@ Create a Spring Boot project called ProductManagementSystem and refactor it into
    - Then change to use SMSNotificationService by using @Qualifier annotation
    - Test again to verify SMSNotificationService is now used
 
-## Submission (Optional)
 
-- Submit the URL of the GitHub Repository that contains your work to NTU black board.
-- Should you reference the work of your classmate(s) or online resources, give them credit by adding either the name of your classmate or URL.
 
 ## References
 - Java: https://docs.oracle.com/javase/

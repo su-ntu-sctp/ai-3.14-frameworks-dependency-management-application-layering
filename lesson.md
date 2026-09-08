@@ -197,37 +197,9 @@ Add the corresponding endpoints (`/discount` and `/audit`) to test out the beans
 
 ## Part 4: @Bean
 
-Other than using `@Component` to configure instances, `@Bean` can be used to configure instances that contain default configuration.
+`@Component` works when the class is yours — you can open the file and add the annotation. But what about a class you did not write? A class that lives inside a library's jar file? You cannot add an annotation to it.
 
-Usage examples:
-
-- You want to autowire an email service instance with pre-defined SMTP settings such as your email address and email server details.
-- You want to use an external library such as DocuSign for digital signing purposes — since you don't have access to the library's source code, you can't annotate it with `@Component`, so `@Bean` is the way to go.
-
-Let's create a dummy email service that would send an order confirmation:
-
-```java
-public class EmailService {
-
-  private String replyTo;
-
-  public void send(String message) {
-    System.out.println("📫 Sending email...");
-    System.out.println("📫 Message: " + message);
-    System.out.println("📫 Reply to: " + this.replyTo);
-  }
-
-  public String getReplyTo() {
-    return this.replyTo;
-  }
-
-  public void setReplyTo(String replyTo) {
-    this.replyTo = replyTo;
-  }
-}
-```
-
-We want to use this class as a bean. We do this by annotating a method with `@Bean` inside a `@Configuration` class. The `@Configuration` annotation indicates that the class contains `@Bean` methods which Spring will pick up and add into the spring container.
+That is what `@Bean` is for. Instead of annotating the class, you write a **method** that builds the object and hands it to Spring. You put that method inside a class annotated with `@Configuration`, which tells Spring: this class contains bean-producing methods, go look inside it.
 
 ```java
 @Configuration
@@ -235,7 +207,6 @@ public class EmailConfig {
 
   @Bean
   public EmailService emailService() {
-    // Configure our email service bean
     EmailService emailService = new EmailService();
     emailService.setReplyTo("orders@company.com");
     return emailService;
@@ -243,31 +214,13 @@ public class EmailConfig {
 }
 ```
 
-The `@Bean` annotation specifies that the method should be used to create a bean of type `EmailService`. The method's return value is the instance registered as a bean in the Spring container.
+Read it from the inside out. The method creates the object with `new`, configures it however you need, and returns it. The `@Bean` annotation tells Spring to call that method at startup and keep the returned object in the container. From that point on it behaves like any other bean — you inject it by type, exactly as you would a `@Component`.
 
-Now we can inject this bean into our `OrderController` using constructor injection, and use it:
+Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set things up. Here you have a whole method body, so you can set the reply-to address, read values from a properties file, or build something that needs several steps before it is ready.
 
-```java
-private ShippingCalculator shippingCalculator;
-private EmailService emailService;
+> 📝 **You will see this pattern a lot.** External clients like `RestClient` for calling other APIs, a custom `ObjectMapper` for JSON handling, and almost everything in Spring Security — `PasswordEncoder` and the security filter chain are both declared as `@Bean` methods in a `@Configuration` class. There is no `@Component` option for any of them, because none of those classes are yours to annotate. Recognise the shape now and it will be familiar when we get there.
 
-public OrderController(ShippingCalculator shippingCalculator, EmailService emailService) {
-  this.shippingCalculator = shippingCalculator;
-  this.emailService = emailService;
-}
-
-@GetMapping("/shipping")
-public String shipping() {
-  emailService.send("Order confirmation from shipping()");
-  return shippingCalculator.calculate();
-}
-```
-
-You can also see the bean in the Spring Boot Dashboard now.
-
-Test calling the `/shipping` endpoint and check your console output.
-
-In this example, we could have annotated the `EmailService` class with `@Component` directly. However, `@Bean` is the right approach when the class belongs to an external library whose source code you cannot modify.
+**The rule:** `@Component` for classes you own. `@Bean` for classes you don't, or when the object needs configuring before it is usable.
 
 ---
 
@@ -395,13 +348,7 @@ public class CustomerRepository {
 
 Note the field is declared as `List<Customer>`, not `ArrayList<Customer>`. Coding to an interface applies to collections too — this keeps the flexibility to swap the underlying implementation later without changing any calling code.
 
-> ⚠️ **Important — the `id` no longer changes on update.**
->
-> In the previous lesson, our update did `customers.set(index, customer)`. That swapped the stored customer out for the object Jackson had just built from the request body — and because `Customer` generates its `id` inline, that new object arrived with a brand new UUID. So after every update, the customer's `id` no longer matched the `id` in the URL.
->
-> Notice what the repository does instead: it fetches the **existing** customer and copies the new values onto it with setters. Same object, same `id`, updated data.
->
-> **This is worth being precise about.** `PUT` at the HTTP level does mean *replace the whole representation of the resource* — that part is correct, and it is why we send every field in the request body. But "replace the representation" means replace the resource's **data**, not mint a new resource identity. The `id` identifies the resource; it is not part of the editable data. The new object and new `id` we saw last lesson came from **how we implemented it** (`set()` on the list), not from `PUT` itself. Any HTTP method written that way would behave the same.
+> ⚠️ **Note the change to update.** Last lesson our update did `customers.set(index, customer)`, which put the newly-created object from the request body straight into the list — and since `Customer` generates its `id` inline, that object arrived with a new `id`. The repository does it the other way round: it fetches the **existing** customer and copies the new values onto it. Same object, same `id`, updated data.
 
 > 📝 **Production note — returning the internal list.** `getAllCustomers()` returns the repository's actual list, not a copy. That means anything holding that reference can add or remove customers directly, bypassing the repository entirely. In production you would return a copy (`new ArrayList<>(customers)`) or an unmodifiable view (`Collections.unmodifiableList(customers)`) to protect the data store. We leave it as-is here for simplicity, but this is exactly the kind of encapsulation leak that causes hard-to-trace bugs in real systems.
 
