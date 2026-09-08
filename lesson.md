@@ -184,7 +184,7 @@ public void setTaxCalculator(TaxCalculator taxCalculator) {
 
 Then call the `/tax` endpoint to test it out.
 
-### 👨‍💻 Activity 1 **(10 minutes)**
+### 👨‍💻 Activity **(10 minutes)**
 
 In your `di-demo` project:
 
@@ -371,7 +371,13 @@ public class CustomerRepository {
 
 Note the field is declared as `List<Customer>`, not `ArrayList<Customer>`. Coding to an interface applies to collections too — this keeps the flexibility to swap the underlying implementation later without changing any calling code.
 
-> ⚠️ **Note the change to update.** Last lesson our update did `customers.set(index, customer)`, which put the newly-created object from the request body straight into the list — and since `Customer` generates its `id` inline, that object arrived with a new `id`. The repository does it the other way round: it fetches the **existing** customer and copies the new values onto it. Same object, same `id`, updated data.
+> ⚠️ **Note the change to update — and why the `id` no longer changes.**
+>
+> Jackson always builds a **new** `Customer` object from the JSON in the request body, and because `Customer` generates its `id` inline, that new object always arrives with a new `id`. That happens in both versions — it is not the thing that changed.
+>
+> What changed is what we do with it. Last lesson we wrote `customers.set(index, customer)`, which **puts that new object into the list**, replacing the old one. So the new object's `id` became the stored `id`.
+>
+> The repository does it the other way round. It fetches the **existing** customer out of the list and copies the values onto it, field by field. The new object is only used as a source of values and is then discarded. And notice there is no `setId()` line — there cannot be, because `id` is `final` and Lombok will not generate a setter for a final field. So the stored customer keeps its original `id`.
 
 > 📝 **Production note — returning the internal list.** `getAllCustomers()` returns the repository's actual list, not a copy. That means anything holding that reference can add or remove customers directly, bypassing the repository entirely. In production you would return a copy (`new ArrayList<>(customers)`) or an unmodifiable view (`Collections.unmodifiableList(customers)`) to protect the data store. We leave it as-is here for simplicity, but this is exactly the kind of encapsulation leak that causes hard-to-trace bugs in real systems.
 
@@ -675,36 +681,6 @@ By coding to an interface, we can swap implementations without touching any of t
 > - Delete `CustomerServiceWithLoggingImpl` now that you have seen how it works
 >
 > Remember `simple-crm` is the project we carry forward for the rest of the module — it needs to be in a working state at the end of every lesson.
-
----
-
-### 👨‍💻 Activity 2 **(20 minutes)**
-
-In your `simple-crm` project, add a `PATCH` endpoint for updating a customer's contact details.
-
-`PUT` replaces the whole representation — the client has to send every field. `PATCH` is for a **partial** update, where the client sends only what they want changed. We will build the simplest possible version: an endpoint that only ever updates the email and contact number.
-
-You need to touch all three layers:
-
-1. **Repository** — add a method that takes an index and a `Customer`, and sets only the email and contact number on the existing customer.
-2. **Interface** — add the matching method signature to `CustomerService`.
-3. **Implementation** — implement it in `CustomerServiceImpl`, reusing `getCustomerIndex(id)`. (If you deleted the logging implementation, you only need to do this once. If you kept it, you must implement the method in both — that is what implementing an interface means.)
-4. **Controller** — add a `@PatchMapping("/{id}")` endpoint. Return `200 OK` on success, `404 Not Found` if the id does not exist, following the same `try`/`catch` pattern as your other endpoints.
-
-Test it in Postman by sending only the two fields:
-
-```json
-{
-  "email": "bruce.banner@avengers.com",
-  "contactNo": "98765432"
-}
-```
-
-Check that the customer's `id`, first name, last name, job title and year of birth are all unchanged.
-
-> 📝 **What real PATCH implementations do.** Ours is deliberately simple — it always updates the same two fields. A production PATCH endpoint accepts *any* subset of fields and has to work out which ones the client actually sent, so it doesn't accidentally wipe the fields that were left out. We will have the tools to do that properly once we cover validation and database entities later in the module.
->
-> **Why front-end teams often prefer PATCH:** with `PUT`, an edit form has to send every field back. If another user changed something in the meantime, that change gets silently overwritten. `PATCH` sends only what actually changed, so it is much safer in a multi-user system.
 
 ---
 
