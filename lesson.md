@@ -68,9 +68,7 @@ Classes that are annotated with `@Component` are known as **Spring Beans**. Spri
 | Setter | Dependencies are injected through setter methods | Legacy approach — rarely used in modern Spring applications |
 | Field | Dependencies are injected directly into the class property | **Do not use** — breaks testability (see note below) |
 
-> > ⚠️ **Why field injection is a problem:** When we write unit tests, we do not start the Spring container. No Spring means nothing is injecting dependencies for us — so the developer has to supply them by hand. This is the one place where we create objects ourselves with `new`, for example `new CustomerController(...)`, and pass in a **fake** service or repository instead of the real one. We use fakes so the test runs instantly and does not need a real database.
->
-> Constructor injection makes this easy: the dependency is a parameter, so anyone can pass one in. Setter injection also works, because the setter is public. But with field injection the field is private and there is no constructor parameter and no setter — so in plain Java there is no way in. Your test cannot hand the controller a fake, and you are forced to start a whole Spring container just to test one class. That is why field injection is avoided in production codebases.
+> ⚠️ **Why field injection is a problem:** When you use field injection, Spring injects the dependency using reflection behind the scenes. This means there is no way to inject a mock or a substitute during unit testing without a Spring container running. In other words, your class becomes impossible to test in isolation. Constructor injection, on the other hand, lets you pass in any implementation directly in a test — no Spring required. This is the primary reason field injection is considered bad practice in production codebases.
 
 Let's create a simple Spring Boot application `di-demo` to see how all these work. Add the Spring Web and Spring Boot DevTools dependencies in `pom.xml`:
 
@@ -199,28 +197,51 @@ Add the corresponding endpoints (`/discount` and `/audit`) to test out the beans
 
 ## Part 4: @Bean
 
-`@Component` works when the class is yours — you can open the file and add the annotation. But what about a class you did not write? A class that lives inside a library's jar file? You cannot add an annotation to it.
+`@Component` works when the class is yours — you can open the file and add the annotation. But what about a class you did not write? A class that lives inside a library or inside the JDK itself? You cannot add an annotation to it.
 
 That is what `@Bean` is for. Instead of annotating the class, you write a **method** that builds the object and hands it to Spring. You put that method inside a class annotated with `@Configuration`, which tells Spring: this class contains bean-producing methods, go look inside it.
 
+Let's use `java.util.Random` as our example. It is part of the JDK, so there is no way for us to put `@Component` on it.
+
 ```java
+package sg.edu.ntu.di_demo;
+
+import java.util.Random;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 @Configuration
-public class EmailConfig {
+public class AppConfig {
 
   @Bean
-  public EmailService emailService() {
-    EmailService emailService = new EmailService();
-    emailService.setReplyTo("orders@company.com");
-    return emailService;
+  public Random random() {
+    return new Random(42);
   }
 }
 ```
 
 Read it from the inside out. The method creates the object with `new`, configures it however you need, and returns it. The `@Bean` annotation tells Spring to call that method at startup and keep the returned object in the container. From that point on it behaves like any other bean — you inject it by type, exactly as you would a `@Component`.
 
-Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set things up. Here you have a whole method body, so you can set the reply-to address, read values from a properties file, or build something that needs several steps before it is ready.
+Now inject it into `OrderController` the same way as everything else:
 
-> 📝 **You will see this pattern a lot.** External clients like `RestClient` for calling other APIs, a custom `ObjectMapper` for JSON handling, and almost everything in Spring Security — `PasswordEncoder` and the security filter chain are both declared as `@Bean` methods in a `@Configuration` class. There is no `@Component` option for any of them, because none of those classes are yours to annotate. Recognise the shape now and it will be familiar when we get there.
+```java
+private final Random random;
+
+// add Random random to the existing constructor parameters,
+// and inside the constructor: this.random = random;
+
+@GetMapping("/order-number")
+public String orderNumber() {
+  return "Order #" + random.nextInt(10000);
+}
+```
+
+Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set anything up. Here you have a whole method body, so you can pass in a seed value, read settings from a properties file, or build something that needs several steps before it is usable.
+
+> 📝 **Is a `@Bean` object a singleton?** Yes — exactly like a `@Component`. Spring calls the method **once** at startup, stores the returned object, and hands that same instance to everyone who asks for it. The method does not run again. The two annotations produce the same result; they differ only in how you tell Spring to build the object.
+
+> 📝 **You will see this pattern a lot.** External clients for calling other APIs, a custom `ObjectMapper` for JSON handling, and almost everything in Spring Security — `PasswordEncoder` and the security filter chain are both declared as `@Bean` methods in a `@Configuration` class. There is no `@Component` option for any of them, because none of those classes are yours to annotate. Recognise the shape now and it will be familiar when we get there.
 
 **The rule:** `@Component` for classes you own. `@Bean` for classes you don't, or when the object needs configuring before it is usable.
 
