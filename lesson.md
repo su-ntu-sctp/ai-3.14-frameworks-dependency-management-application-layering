@@ -371,13 +371,7 @@ public class CustomerRepository {
 
 Note the field is declared as `List<Customer>`, not `ArrayList<Customer>`. Coding to an interface applies to collections too — this keeps the flexibility to swap the underlying implementation later without changing any calling code.
 
-> ⚠️ **Note the change to update — and why the `id` no longer changes.**
->
-> Jackson always builds a **new** `Customer` object from the JSON in the request body, and because `Customer` generates its `id` inline, that new object always arrives with a new `id`. That happens in both versions — it is not the thing that changed.
->
-> What changed is what we do with it. Last lesson we wrote `customers.set(index, customer)`, which **puts that new object into the list**, replacing the old one. So the new object's `id` became the stored `id`.
->
-> The repository does it the other way round. It fetches the **existing** customer out of the list and copies the values onto it, field by field. The new object is only used as a source of values and is then discarded. And notice there is no `setId()` line — there cannot be, because `id` is `final` and Lombok will not generate a setter for a final field. So the stored customer keeps its original `id`.
+> 📝 **Note the change to update.** Last lesson we used `customers.set(index, customer)`, which puts a new object into the list. The repository instead fetches the existing customer and copies the values onto it, field by field.
 
 > 📝 **Production note — returning the internal list.** `getAllCustomers()` returns the repository's actual list, not a copy. That means anything holding that reference can add or remove customers directly, bypassing the repository entirely. In production you would return a copy (`new ArrayList<>(customers)`) or an unmodifiable view (`Collections.unmodifiableList(customers)`) to protect the data store. We leave it as-is here for simplicity, but this is exactly the kind of encapsulation leak that causes hard-to-trace bugs in real systems.
 
@@ -504,7 +498,7 @@ public class CustomerController {
 
 Notice that `customerService` is declared `final`. This is a best practice with constructor injection — since the dependency is set once in the constructor and never changes, marking it `final` makes that explicit and prevents accidental reassignment.
 
-Test all the endpoints again after refactoring. They should work as before — and check that the `id` now stays the same after a `PUT`.
+Test all the endpoints again after refactoring. They should all work exactly as before.
 
 ### Coding to an Interface
 
