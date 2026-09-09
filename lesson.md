@@ -434,6 +434,10 @@ Finally, we modify `CustomerController` to use the `CustomerService` class. Noti
 
 The controller no longer needs the `ArrayList`, the preloaded data in its constructor, or the `getCustomerIndex()` helper. Delete all three — they now live in the repository and service.
 
+> 📝 **You will get a compile error on `getAllCustomers` — this is expected.** From last lesson your method returns `ResponseEntity<ArrayList<Customer>>`, but the repository returns `List<Customer>`, so the types no longer match. Change the return type to `ResponseEntity<List<Customer>>` and add the `java.util.List` import (VS Code will offer it as a quick fix with `Ctrl+.`).
+>
+> This is the same principle as coding to an interface for the service layer: the controller should not care *which kind* of list it receives, only that it is a `List`. Always use the interface type, not the concrete collection class.
+
 > 📝 **Why not use `new CustomerService()` here?** Service classes are designed to provide functionality — not to hold data. We only ever need one instance in the entire application. If every class that needed `CustomerService` called `new CustomerService()`, we'd end up with multiple unnecessary instances. By using constructor injection, Spring creates exactly one instance and reuses it everywhere — the **Singleton pattern**, which is the default behaviour for all Spring beans.
 
 ```java
