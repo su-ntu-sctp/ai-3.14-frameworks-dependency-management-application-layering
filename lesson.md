@@ -223,19 +223,42 @@ public class AppConfig {
 
 Read it from the inside out. The method creates the object with `new`, configures it however you need, and returns it. The `@Bean` annotation tells Spring to call that method at startup and keep the returned object in the container. From that point on it behaves like any other bean — you inject it by type, exactly as you would a `@Component`.
 
-Now inject it into `OrderController` the same way as everything else:
+Now inject it into `OrderController` the same way as everything else. Add `Random` as another constructor parameter alongside the calculators:
 
 ```java
-private final Random random;
+@RestController
+public class OrderController {
 
-// add Random random to the existing constructor parameters,
-// and inside the constructor: this.random = random;
+  private final ShippingCalculator shippingCalculator;
+  private final TaxCalculator taxCalculator;
+  private final Random random;
 
-@GetMapping("/order-number")
-public String orderNumber() {
-  return "Order #" + random.nextInt(10000);
+  public OrderController(ShippingCalculator shippingCalculator,
+                         TaxCalculator taxCalculator,
+                         Random random) {
+    this.shippingCalculator = shippingCalculator;
+    this.taxCalculator = taxCalculator;
+    this.random = random;
+  }
+
+  @GetMapping("/tax")
+  public String tax() {
+    return taxCalculator.calculate();
+  }
+
+  @GetMapping("/shipping")
+  public String shipping() {
+    return shippingCalculator.calculate();
+  }
+
+  @GetMapping("/order-number")
+  public String orderNumber() {
+    return "Order #" + random.nextInt(10000);
+  }
 }
 ```
+
+Notice `Random` is injected exactly like the calculators, even though it came from a `@Bean` method instead of `@Component`. Once a bean is in the container, it makes no difference how it got there.
 
 Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set anything up — Spring just calls a no-arg constructor and that is all you get. Here you have a whole method body, so you can pass constructor arguments, call setters, read settings from a properties file, or build something that needs several steps before it is usable.
 
