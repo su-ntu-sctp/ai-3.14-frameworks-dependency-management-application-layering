@@ -216,7 +216,7 @@ public class AppConfig {
 
   @Bean
   public Random random() {
-    return new Random(42);
+    return new Random();
   }
 }
 ```
@@ -237,7 +237,7 @@ public String orderNumber() {
 }
 ```
 
-Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set anything up. Here you have a whole method body, so you can pass in a seed value, read settings from a properties file, or build something that needs several steps before it is usable.
+Notice this also solves a second problem: **configuration**. `@Component` gives you no place to set anything up — Spring just calls a no-arg constructor and that is all you get. Here you have a whole method body, so you can pass constructor arguments, call setters, read settings from a properties file, or build something that needs several steps before it is usable.
 
 > 📝 **Is a `@Bean` object a singleton?** Yes — exactly like a `@Component`. Spring calls the method **once** at startup, stores the returned object, and hands that same instance to everyone who asks for it. The method does not run again. The two annotations produce the same result; they differ only in how you tell Spring to build the object.
 
